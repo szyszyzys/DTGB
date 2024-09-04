@@ -1,13 +1,22 @@
-import torch
+import argparse
+
 import numpy as np
 import pandas as pd
+import torch
 from tqdm import tqdm
 from transformers import AutoTokenizer, AutoConfig, AutoModel
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--dataset', type=str, default='Enron')
+
+args = parser.parse_args()
 
 if __name__ == "__main__":
     precision = 8
     batch_size = 1000
-    data_set_name = 'Amazon_movies'
+    work_path = "DyLink_Datasets"
+    data_set_name = args.dataset
+    file_path = f'{work_path}/{data_set_name}'
     pretrained_model_name = 'bert-base-uncased'
 
     # Prepare PLM modle and tokenizers
@@ -18,17 +27,17 @@ if __name__ == "__main__":
     print("PLM initialized")
 
     # [ 'Amazon_movies', 'Enron', 'GDELT', 'Googlemap_CT', 'ICEWS1819', 'Stack_elec', 'Stack_english', 'Stack_ubuntu', 'Yelp']
-    for data_set_name in ['GDELT']:
+    for data_set_name in [data_set_name]:
         print(data_set_name)
-        edge_list = pd.read_csv(data_set_name + '/edge_list.csv')
+        edge_list = pd.read_csv(file_path + '/edge_list.csv')
         num_node = max(edge_list['u'].max(), edge_list['i'].max())
         num_rel = edge_list['r'].max()
 
         # Prepare datasets
         entity_embeddings = [np.zeros(hidden_size)]
-        entity_text_reader = pd.read_csv(data_set_name + '/entity_text.csv', chunksize=batch_size)
+        entity_text_reader = pd.read_csv(file_path + '/entity_text.csv', chunksize=batch_size)
 
-        with tqdm(total = num_node) as pbar:
+        with tqdm(total=num_node) as pbar:
             for batch in entity_text_reader:
                 id_batch = batch['i'].tolist()
                 text_batch = batch['text'].tolist()
@@ -37,7 +46,8 @@ if __name__ == "__main__":
                     text_batch = text_batch[1:]
                 if np.nan in text_batch:
                     text_batch = ['NULL' if type(i) != str else i for i in text_batch]
-                encoded_input = tokenizer(text_batch, padding = True, truncation=True, max_length=512, return_tensors='pt')
+                encoded_input = tokenizer(text_batch, padding=True, truncation=True, max_length=512,
+                                          return_tensors='pt')
                 with torch.no_grad():
                     output = PLM(**encoded_input.to('cuda'))[1]
                     output = output.cpu()
@@ -48,13 +58,13 @@ if __name__ == "__main__":
         entity_embeddings = np.array(entity_embeddings)
         print([entity_embeddings.shape, num_node])
         assert len(entity_embeddings) == num_node + 1
-        np.save(data_set_name + '/e_feat.npy', entity_embeddings)
+        np.save(file_path + '/e_feat.npy', entity_embeddings)
 
         # Prepare datasets
         rel_embeddings = [np.zeros(hidden_size)]
-        rel_text_reader = pd.read_csv(data_set_name + '/relation_text.csv', chunksize=batch_size)
+        rel_text_reader = pd.read_csv(file_path + '/relation_text.csv', chunksize=batch_size)
 
-        with tqdm(total = num_rel) as pbar:
+        with tqdm(total=num_rel) as pbar:
             for batch in rel_text_reader:
                 id_batch = batch['i'].tolist()
                 text_batch = batch['text'].tolist()
@@ -63,7 +73,8 @@ if __name__ == "__main__":
                     text_batch = text_batch[1:]
                 if np.nan in text_batch:
                     text_batch = ['NULL' if type(i) != str else i for i in text_batch]
-                encoded_input = tokenizer(text_batch, padding = True, truncation=True, max_length=512 , return_tensors='pt')
+                encoded_input = tokenizer(text_batch, padding=True, truncation=True, max_length=512,
+                                          return_tensors='pt')
                 with torch.no_grad():
                     output = PLM(**encoded_input.to('cuda'))[1]
                     output = output.cpu()
@@ -75,4 +86,4 @@ if __name__ == "__main__":
         rel_embeddings = np.array(rel_embeddings)
         assert len(rel_embeddings) == num_rel + 1
         print(rel_embeddings.shape)
-        np.save(data_set_name + '/r_feat.npy', rel_embeddings)
+        np.save(file_path + '/r_feat.npy', rel_embeddings)

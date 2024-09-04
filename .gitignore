@@ -1,0 +1,17 @@
+DyLink_Datasets/**
+DyLink_Datasets/*
+DyLink_Datasets/
+*.csv
+*.json
+*.xlsx
+*.xml
+
+/outputs
+/data
+/log
+*.py[cod]
+**/__pycache__/
+.idea/*
+/raw
+/datasets
+*.ipynb
