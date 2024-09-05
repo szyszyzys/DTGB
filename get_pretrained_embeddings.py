@@ -7,7 +7,7 @@ from tqdm import tqdm
 from transformers import AutoTokenizer, AutoConfig, AutoModel
 
 parser = argparse.ArgumentParser()
-parser.add_argument('', type=str, default='Enron')
+parser.add_argument('--dataset', type=str, default='Enron')
 
 args = parser.parse_args()
 
